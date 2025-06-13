@@ -164,9 +164,6 @@ pub fn round_robin(mut queue: Vec<Process>, processing_time: f32) -> SimulationR
         } else {
             current_process_index += 1;
         }
-        if arrived_processes.len() == 0 || arrived_processes.len() == 1 {
-            println!("test");
-        }
     }
     let average_waiting_time = all_processes_total_waiting_time / queue_size;
     SimulationResults {
