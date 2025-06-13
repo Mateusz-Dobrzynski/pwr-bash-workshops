@@ -1,14 +1,12 @@
 use std::{
-    fmt::format,
     fs::{self, File},
     io::Write,
 };
 
 use rand::{random_bool, Rng};
-use rand_distr::{num_traits::float, Distribution, Normal};
+use rand_distr::{Distribution, Normal};
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Process {
@@ -31,16 +29,29 @@ pub fn create(name: &str, arrival_time: f32, burst_time: f32, priority: Option<u
     }
 }
 
-pub fn read_queue_from(path: &str) -> Result<Vec<Process>, Error> {
+pub fn read_processes_list_from(path: &str) -> Result<Vec<Process>, Error> {
     let path_content = fs::read_to_string(path).unwrap();
     let queue: Vec<Process> = serde_json::from_str(&path_content).unwrap();
     Ok(queue)
 }
 
-pub fn save_queue_to_path(queue: Vec<Process>, path: &str) -> Result<(), Error> {
+pub fn save_processes_list_to_path(queue: &Vec<Process>, path: &str) -> Result<(), Error> {
     let serialized_queue = serde_json::to_string(&queue).unwrap();
     let mut file = File::create(path).unwrap();
     file.write_all(serialized_queue.as_bytes()).unwrap();
+    Ok(())
+}
+
+pub fn read_pages_references_from(path: &str) -> Result<Vec<i16>, Error> {
+    let path_content = fs::read_to_string(path).unwrap();
+    let queue: Vec<i16> = serde_json::from_str(&path_content).unwrap();
+    Ok(queue)
+}
+
+pub fn save_pages_references_to_path(references: Vec<i16>, path: &str) -> Result<(), Error> {
+    let serialized_references = serde_json::to_string(&references).unwrap();
+    let mut file = File::create(path).unwrap();
+    file.write_all(serialized_references.as_bytes()).unwrap();
     Ok(())
 }
 
@@ -55,7 +66,10 @@ pub fn generate_queue(
     let normal = Normal::new(mean_burst_time, burst_time_standard_deviation).unwrap();
 
     for i in 0..length {
-        let burst_time = normal.sample(&mut rand::rng());
+        let mut burst_time = normal.sample(&mut rand::rng());
+        if burst_time < 0.0 {
+            burst_time *= -1.0;
+        }
         let priority: u16 = rng.random();
         let time_progression = random_bool(0.9);
         if time_progression {

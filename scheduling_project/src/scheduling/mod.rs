@@ -1,4 +1,8 @@
-use std::vec;
+use std::{
+    fs::File,
+    io::{Error, Write},
+    vec,
+};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,7 +12,7 @@ use crate::process::Process;
 #[derive(Serialize, Deserialize)]
 pub struct SimulationResults {
     processes: Vec<Process>,
-    average_waiting_time: f32,
+    pub average_waiting_time: f32,
     total_execution_time: f32,
     processing_history: Vec<ProcessingRecord>,
 }
@@ -22,6 +26,19 @@ impl SimulationResults {
                 &record.start_time, &record.process_name, &record.duration
             )
         }
+    }
+
+    pub fn to_csv(&self, path: &str) -> Result<(), Error> {
+        let mut output: String = "Time,Process_name,Processing_time".to_owned();
+        for record in &self.processing_history {
+            output = format!(
+                "{}\n{},{},{}",
+                output, record.start_time, record.process_name, record.duration
+            )
+        }
+        let mut file = File::create(path).unwrap();
+        file.write_all(output.as_bytes()).unwrap();
+        Ok(())
     }
 }
 
@@ -90,16 +107,15 @@ pub fn round_robin(mut queue: Vec<Process>, processing_time: f32) -> SimulationR
     let mut current_process_index = 0;
     let mut all_processes_total_waiting_time: f32 = 0.0;
     let queue_size = queue.len() as f32;
-    let mut indices_to_be_removed: Vec<usize> = vec![];
 
+    time = queue[0].arrival_time;
     simulate_processes_arrival(
         &mut queue, // a mutable reference allows to modify the original object
         &mut arrived_processes,
-        &mut indices_to_be_removed,
-        time,
+        &mut time,
     );
 
-    while arrived_processes.len() > 0 {
+    while arrived_processes.len() > 0 || queue.len() > 0 {
         let current_process = &mut arrived_processes[current_process_index];
 
         // Log waiting time
@@ -131,20 +147,18 @@ pub fn round_robin(mut queue: Vec<Process>, processing_time: f32) -> SimulationR
             }
         }
 
+        if queue.len() > 0 {
+            simulate_processes_arrival(&mut queue, &mut arrived_processes, &mut time);
+        }
+
         // Determine the next process
         if current_process_index + 1 == arrived_processes.len() {
             current_process_index = 0;
         } else {
             current_process_index += 1;
         }
-
-        if queue.len() > 0 {
-            simulate_processes_arrival(
-                &mut queue,
-                &mut arrived_processes,
-                &mut indices_to_be_removed,
-                time,
-            );
+        if arrived_processes.len() == 0 || arrived_processes.len() == 1 {
+            println!("test");
         }
     }
     let average_waiting_time = all_processes_total_waiting_time / queue_size;
@@ -159,18 +173,23 @@ pub fn round_robin(mut queue: Vec<Process>, processing_time: f32) -> SimulationR
 fn simulate_processes_arrival(
     queue: &mut Vec<Process>,
     arrived_processes: &mut Vec<Process>,
-    indices_to_be_removed: &mut Vec<usize>,
-    time: f32,
+    time: &mut f32,
 ) {
+    let mut indices_to_be_removed: Vec<usize> = vec![];
     for i in 0..queue.len() {
         let next_process = &queue[i];
-        if next_process.arrival_time <= time {
+        if next_process.arrival_time <= *time {
             arrived_processes.push(queue[i].clone());
             indices_to_be_removed.push(i);
         }
     }
     for i in (0..indices_to_be_removed.len()).rev() {
         queue.remove(indices_to_be_removed[i]);
+    }
+    if arrived_processes.len() == 0 {
+        let next_arrival_time = queue[0].arrival_time;
+        *time = next_arrival_time;
+        simulate_processes_arrival(queue, arrived_processes, time);
     }
 }
 
@@ -201,6 +220,45 @@ mod round_robin_tests {
         ];
         let result = round_robin(queue, 4.0);
         let rounded_waiting_time = (result.average_waiting_time * 100.0).round() / 100.0;
-        assert!(rounded_waiting_time == 5.67000008); // Floating point math in action. This should be just 5.67
+        assert!(result.total_execution_time == 30.0);
+        assert!(rounded_waiting_time == 5.67); // Floating point math in action. This should be just 5.67
+    }
+
+    #[test]
+    fn test_sequential_arrival_times() {
+        let queue: Vec<Process> = vec![
+            process::create("P1", 1.0, 4.0, None),
+            process::create("P2", 5.0, 4.0, None),
+            process::create("P3", 9.0, 4.0, None),
+        ];
+        let result = round_robin(queue, 4.0);
+        let rounded_waiting_time = (result.average_waiting_time * 100.0).round() / 100.0;
+        assert!(rounded_waiting_time == 0.0);
+        assert!(result.total_execution_time == 13.0);
+    }
+
+    #[test]
+    fn test_arrival_with_gaps_times() {
+        let queue: Vec<Process> = vec![
+            process::create("P1", 1.0, 4.0, None),
+            process::create("P2", 5.0, 4.0, None),
+            process::create("P3", 9.0, 4.0, None),
+        ];
+        let result = round_robin(queue, 4.0);
+        let rounded_waiting_time = (result.average_waiting_time * 100.0).round() / 100.0;
+        assert!(rounded_waiting_time == 0.0);
+    }
+
+    #[test]
+    fn test_process_arrival_simulation() {
+        let mut queue: Vec<Process> = vec![
+            process::create("P2", 5.0, 4.0, None),
+            process::create("P3", 9.0, 4.0, None),
+        ];
+        let mut arrived_processes: Vec<Process> = vec![];
+        let mut time = 5.0;
+        simulate_processes_arrival(&mut queue, &mut arrived_processes, &mut time);
+        assert!(queue.len() == 1);
+        assert!(arrived_processes.len() == 1);
     }
 }
