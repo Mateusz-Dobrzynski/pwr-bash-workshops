@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Error;
 
 #[derive(Serialize, Deserialize, Clone)]
+/// Representation of a process to be used in
+/// scheduling algorithm simulations
 pub struct Process {
     pub arrival_time: f32,
     pub burst_time: f32,
@@ -18,6 +20,7 @@ pub struct Process {
     pub total_waiting_time: Option<f32>,
 }
 
+/// A de-facto process constructor
 pub fn create(name: &str, arrival_time: f32, burst_time: f32, priority: Option<u16>) -> Process {
     Process {
         arrival_time,
@@ -28,6 +31,8 @@ pub fn create(name: &str, arrival_time: f32, burst_time: f32, priority: Option<u
         total_waiting_time: None,
     }
 }
+
+///// A bunch of serialization/deserialization utility functions
 
 pub fn read_processes_list_from(path: &str) -> Result<Vec<Process>, Error> {
     let path_content = fs::read_to_string(path).unwrap();
@@ -55,6 +60,8 @@ pub fn save_pages_references_to_path(references: Vec<i16>, path: &str) -> Result
     Ok(())
 }
 
+/// Returns a list of processes with burst times meeting
+/// particular standard deviation parameters
 pub fn generate_queue(
     length: i16,
     mean_burst_time: f32,
@@ -88,6 +95,9 @@ pub fn generate_queue(
     queue
 }
 
+/// I thought that names "Process_1", "Process_2", etc. would not be
+/// as easily distinguishable as "Alfa_0", "Sierra_5", etc.,
+/// so I created a function to generate these
 fn get_human_readable_process_name(process_number: i16) -> String {
     let nato_phonetic_alphabet: Vec<&str> = vec![
         "Alfa", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India",

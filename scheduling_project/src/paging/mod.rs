@@ -1,8 +1,5 @@
-use rand::{rng, seq::SliceRandom, Rng};
-use rand_distr::{
-    num_traits::{pow, Pow},
-    Distribution, Normal,
-};
+use rand::seq::SliceRandom;
+use rand_distr::{num_traits::pow, Distribution, Normal};
 
 pub struct PagingSimulationResults {
     pub physical_memory_size: i16,
@@ -10,9 +7,11 @@ pub struct PagingSimulationResults {
     pub hits: i16,
     pub misses: i16,
     pub hit_miss_ratio: f32,
+    /// History of addresses that were replaced. None indicates a hit
     pub swap_history: Vec<Option<i16>>,
 }
 
+/// Least recently used scheduling algorithm implementation
 pub fn least_recently_used(
     addresses_count: i16,
     physical_memory_size: i16,
@@ -24,7 +23,9 @@ pub fn least_recently_used(
     let mut misses = 0;
     let mut used_indices: Vec<i16> = vec![];
     let mut swap_history: Vec<Option<i16>> = vec![];
+
     for reference in references {
+        // Denote a hit and frame usage
         if physical_memory.contains(&Some(reference)) {
             hits += 1;
             let used_index = physical_memory
@@ -38,6 +39,7 @@ pub fn least_recently_used(
         }
         misses += 1;
         if physical_memory.contains(&None) {
+            // Allocate free memory
             let free_index = physical_memory
                 .iter()
                 .position(|index| index.is_none())
@@ -45,6 +47,7 @@ pub fn least_recently_used(
             physical_memory[free_index] = Some(reference);
             used_indices.push(free_index as i16);
         } else {
+            // Replace least recently used frame
             let least_recently_used_index = used_indices[0];
             used_indices.remove(0);
             used_indices.push(least_recently_used_index);
@@ -63,6 +66,7 @@ pub fn least_recently_used(
     }
 }
 
+/// FIFO algorithm implementation
 pub fn fifo(
     addresses_count: i16,
     physical_memory_size: i16,
@@ -76,11 +80,13 @@ pub fn fifo(
     let mut swap_history: Vec<Option<i16>> = vec![];
     for reference in references {
         if physical_memory.contains(&Some(reference)) {
+            // Denote a hit
             hits += 1;
             continue;
         }
         misses += 1;
         if physical_memory.contains(&None) {
+            // Allocate free memory
             let free_index = physical_memory
                 .iter()
                 .position(|index| index.is_none())
@@ -88,6 +94,7 @@ pub fn fifo(
             physical_memory[free_index] = Some(reference);
             used_indices.push(free_index as i16);
         } else {
+            // Replace frame that was least recently changed
             let first_in_index = used_indices[0];
             used_indices.remove(0);
             used_indices.push(first_in_index);
@@ -106,6 +113,9 @@ pub fn fifo(
     }
 }
 
+/// Returns a randomly generated list of integers representing
+/// references to particular memory addresses.
+/// Can be adjusted to meet particular standard deviation requirements
 pub fn generate_normal_distribution_of_references(
     addresses_count: i16,
     mean_references_count: f32,
@@ -114,14 +124,12 @@ pub fn generate_normal_distribution_of_references(
     let mut references: Vec<i16> = vec![];
     let mut references_counts: Vec<i16> = vec![];
     let mut rng = rand::rng();
-    let mut total_references_count = 0;
     let normal = Normal::new(mean_references_count, standard_deviation).unwrap();
 
     for _ in 0..addresses_count {
         let sample = normal.sample(&mut rng);
         let count = sample.max(0.0) as i16;
         references_counts.push(count);
-        total_references_count += count;
     }
 
     let current_mean = references_counts.iter().sum::<i16>() as f32 / addresses_count as f32;
@@ -151,8 +159,6 @@ fn calculate_standard_deviation(array: &Vec<i16>, mean: f32) -> f32 {
 
 #[cfg(test)]
 mod round_robin_tests {
-    use crate::process;
-
     use super::*;
     #[test]
     fn test_fifo() {
