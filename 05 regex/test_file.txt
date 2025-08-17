@@ -1,0 +1,37 @@
+0x9G
+0xAB
+0xab
+13F
+0x4c 0x5c     0x6c
+0xdd, 0xee, 
+
+-0x12 +0x12 0x102f
+
+
+jan.kowalski@pwr.edu.pl
+anna.kowalska anna.kowalska@ 
+@o2.pl
+AaAa@gmail.com
+aa11aa@gmail.com
+b,b@gmail.com
+c;c@gmail.com
+d:d@gmail.com
+e@ONET.pl
+e@ONET00.pl
+f@o2
+f@gmail.com.pl
+ g@gmail.com
+
+  h@gmail.com 
+i@gmail.com j@gmail.com
+
+
+-1
++1
+
+-1.234 +1.234    1.2
+
+2.3 2,4 2;5
+.4 0.9
+
+
